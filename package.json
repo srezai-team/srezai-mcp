@@ -1,0 +1,52 @@
+{
+  "name": "srezai-mcp",
+  "version": "0.1.0",
+  "description": "MCP-сервер срезAI: веб-поиск, чтение страниц, скриншоты и извлечение данных по схеме как инструменты ИИ-агента",
+  "license": "MIT",
+  "author": "срезAI <support@srezai.ru>",
+  "homepage": "https://srezai.ru",
+  "mcpName": "io.github.srezai-team/srezai-mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/srezai-team/srezai-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/srezai-team/srezai-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "search",
+    "scraping",
+    "llm",
+    "agents",
+    "srezai"
+  ],
+  "type": "module",
+  "bin": {
+    "srezai-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "node --import tsx --test test/proxy.test.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
