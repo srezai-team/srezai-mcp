@@ -1,6 +1,6 @@
 {
   "name": "srezai-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP-сервер срезAI: веб-поиск, чтение страниц, скриншоты и извлечение данных по схеме как инструменты ИИ-агента",
   "license": "MIT",
   "author": "срезAI <support@srezai.ru>",
