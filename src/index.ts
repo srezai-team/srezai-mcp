@@ -16,9 +16,14 @@ import { DEFAULT_ENDPOINT, forward } from "./proxy.js";
 
 const KEY = process.env["SREZAI_API_KEY"];
 
+// Без ключа процесс не завершается: initialize и tools/list сервер отдаёт и
+// анонимно, а каталоги MCP опрашивают сервер в песочнице, где ключа нет и взять
+// его негде. Выход с кодом 1 там выглядел как неработающий сервер. Вызовы
+// инструментов упрутся в 401 — с объяснением ниже, а не с молчаливым падением.
 if (!KEY) {
   process.stderr.write(
-    "srezai-mcp: не задан SREZAI_API_KEY.\n\n" +
+    "srezai-mcp: не задан SREZAI_API_KEY — доступен только просмотр списка " +
+      "инструментов.\n\n" +
       "Ключ создаётся в личном кабинете: https://srezai.ru/dashboard\n" +
       "Пример конфигурации клиента:\n\n" +
       '  "srezai": {\n' +
@@ -27,7 +32,6 @@ if (!KEY) {
       '    "env": { "SREZAI_API_KEY": "srz_live_ваш_ключ" }\n' +
       "  }\n",
   );
-  process.exit(1);
 }
 
 const endpoint = process.env["SREZAI_MCP_ENDPOINT"] ?? DEFAULT_ENDPOINT;

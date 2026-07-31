@@ -61,6 +61,19 @@ test("ключ уходит в заголовке Bearer", async () => {
   assert.deepEqual(out, ['{"jsonrpc":"2.0","id":1}']);
 });
 
+test("без ключа заголовок Authorization не отправляется", async () => {
+  // Пустой «Bearer » сервер разбирает как неверный ключ и отвечает 401, тогда
+  // как запрос совсем без заголовка получает анонимный tools/list. Каталоги MCP
+  // опрашивают сервер именно так — ключа у них нет.
+  const seen: { init?: RequestInit | undefined } = {};
+  await forward(REQ, {
+    fetch: stubFetch(200, "application/json", '{"jsonrpc":"2.0","id":1}', seen),
+    write: () => {},
+  });
+  const headers = seen.init?.headers as Record<string, string>;
+  assert.equal("Authorization" in headers, false);
+});
+
 test("тело запроса пересылается дословно", async () => {
   const seen: { init?: RequestInit | undefined } = {};
   await forward(`  ${REQ}  `, {

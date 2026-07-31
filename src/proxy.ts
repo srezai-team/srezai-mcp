@@ -9,7 +9,12 @@ export const DEFAULT_ENDPOINT = "https://srezai.ru/api/mcp";
 const TIMEOUT_MS = 300_000;
 
 export interface ProxyOptions {
-  apiKey: string;
+  /**
+   * Ключ доступа. Без него заголовок Authorization не отправляется вовсе:
+   * сервер отдаёт initialize и tools/list анонимно, а пустой «Bearer » он
+   * разбирает как неверный ключ и отвечает 401.
+   */
+  apiKey?: string | undefined;
   endpoint?: string;
   fetch?: typeof globalThis.fetch;
   /** Куда писать ответы. Отделено от process.stdout ради тестов. */
@@ -50,7 +55,7 @@ export async function forward(
     res = await doFetch(opts.endpoint ?? DEFAULT_ENDPOINT, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${opts.apiKey}`,
+        ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
         "Content-Type": "application/json",
         Accept: "application/json, text/event-stream",
       },
@@ -69,13 +74,18 @@ export async function forward(
   if (res.status === 401) {
     // Самая частая ошибка настройки. Общий текст «HTTP 401» заставил бы
     // пользователя гадать, а причина всегда одна и та же.
-    opts.log?.("401: ключ не принят");
+    opts.log?.(opts.apiKey ? "401: ключ не принят" : "401: ключ не задан");
     if (hasId) {
       opts.write(
         errorResponse(
           id,
-          "срезAI не принял ключ. Проверьте SREZAI_API_KEY: он начинается с " +
-            "srz_live_ и создаётся в личном кабинете https://srezai.ru/dashboard.",
+          opts.apiKey
+            ? "срезAI не принял ключ. Проверьте SREZAI_API_KEY: он начинается " +
+                "с srz_live_ и создаётся в личном кабинете " +
+                "https://srezai.ru/dashboard."
+            : "Для вызова инструментов нужен ключ: задайте SREZAI_API_KEY " +
+                "(srz_live_…) в конфигурации клиента. Ключ создаётся в личном " +
+                "кабинете https://srezai.ru/dashboard.",
           -32001,
         ),
       );

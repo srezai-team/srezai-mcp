@@ -81,13 +81,27 @@ cmd /c "set SREZAI_API_KEY=srz_live_ваш_ключ && npx -y srezai-mcp"
 
 | Переменная | Назначение |
 | --- | --- |
-| `SREZAI_API_KEY` | Ключ доступа. Обязательна |
+| `SREZAI_API_KEY` | Ключ доступа. Нужен для вызова инструментов |
 | `SREZAI_MCP_ENDPOINT` | Другой адрес сервера. По умолчанию `https://srezai.ru/api/mcp` |
+
+Без ключа мост всё равно запускается и отдаёт `initialize` и `tools/list`: список
+инструментов сервер публикует анонимно, так его читают каталоги MCP. Вызов любого
+инструмента в этом режиме вернёт ошибку с указанием задать `SREZAI_API_KEY`. /
+Without a key the bridge still starts and serves `initialize` and `tools/list` —
+the tool list is public, which is how MCP directories read it. Calling a tool
+returns an error asking you to set `SREZAI_API_KEY`.
 
 ## Разработка / Development
 
 ```bash
 npm ci && npm test && npm run build
+```
+
+Docker-образ (его собирают каталоги MCP, опрашивая сервер в песочнице) /
+Docker image, built by MCP directories to introspect the server in a sandbox:
+
+```bash
+docker build -t srezai-mcp . && docker run --rm -i -e SREZAI_API_KEY=srz_live_ваш_ключ srezai-mcp
 ```
 
 ## Лицензия / License
