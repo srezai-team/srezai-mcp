@@ -8,6 +8,10 @@ import { messagesFrom, parseSse } from "../src/rpc.js";
 
 const KEY = "srz_live_test";
 const REQ = '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}';
+/** Вызов инструмента: в отличие от tools/list он без ключа не работает. */
+const CALL =
+  '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"web_search"}}';
+const INIT = '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}';
 
 /** Ответ-заготовка: fetch подменяется, сеть не нужна. */
 function stubFetch(
@@ -86,7 +90,7 @@ test("тело запроса пересылается дословно", async 
 
 test("401 объясняет, что не так с ключом", async () => {
   const out: string[] = [];
-  await forward(REQ, {
+  await forward(CALL, {
     apiKey: KEY,
     fetch: stubFetch(401, "application/json", '{"error":"invalid_token"}'),
     write: (l) => out.push(l),
@@ -98,6 +102,55 @@ test("401 объясняет, что не так с ключом", async () => {
   assert.equal(msg.id, 1);
   assert.match(msg.error.message, /srz_live_/);
   assert.match(msg.error.message, /dashboard/);
+});
+
+test("отвергнутый ключ не ломает initialize: повтор без заголовка", async () => {
+  // Каталоги MCP запускают сервер с ключом-заглушкой. Ошибка на initialize
+  // заставляет клиента закрыть соединение, и список инструментов не доезжает.
+  const calls: Array<Record<string, string>> = [];
+  const out: string[] = [];
+  const fetchStub = (async (_url: string, init?: RequestInit) => {
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    calls.push(headers);
+    return "Authorization" in headers
+      ? new Response('{"error":"invalid_token"}', {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        })
+      : new Response('{"jsonrpc":"2.0","id":0,"result":{}}', {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+  }) as unknown as typeof globalThis.fetch;
+
+  await forward(INIT, { apiKey: KEY, fetch: fetchStub, write: (l) => out.push(l) });
+
+  assert.equal(calls.length, 2);
+  assert.equal("Authorization" in (calls[1] ?? {}), false);
+  assert.deepEqual(out, ['{"jsonrpc":"2.0","id":0,"result":{}}']);
+});
+
+test("вызов инструмента при отвергнутом ключе не повторяется анонимно", async () => {
+  // Иначе пользователь получил бы «нужен ключ» вместо «ключ неверный» и правил
+  // бы не то. Анонимно инструменты всё равно не работают.
+  let calls = 0;
+  const out: string[] = [];
+  await forward(CALL, {
+    apiKey: KEY,
+    fetch: (() => {
+      calls += 1;
+      return Promise.resolve(
+        new Response("{}", {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }) as unknown as typeof fetch,
+    write: (l) => out.push(l),
+  });
+  assert.equal(calls, 1);
+  const msg = JSON.parse(out[0] ?? "{}") as { error: { message: string } };
+  assert.match(msg.error.message, /srz_live_/);
 });
 
 test("уведомление без id не получает ответа", async () => {

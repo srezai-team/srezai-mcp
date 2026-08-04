@@ -8,6 +8,20 @@ export const DEFAULT_ENDPOINT = "https://srezai.ru/api/mcp";
  */
 const TIMEOUT_MS = 300_000;
 
+/**
+ * Методы, которые сервер отдаёт и без ключа.
+ *
+ * Нужны, чтобы отвергнутый ключ не ломал соединение целиком: клиент, получивший
+ * ошибку на initialize, дальше не идёт вообще. Так падала интроспекция в
+ * каталогах MCP — они запускают сервер в песочнице с ключом-заглушкой.
+ */
+const ANONYMOUS_METHODS = new Set([
+  "initialize",
+  "notifications/initialized",
+  "tools/list",
+  "ping",
+]);
+
 export interface ProxyOptions {
   /**
    * Ключ доступа. Без него заголовок Authorization не отправляется вовсе:
@@ -23,13 +37,17 @@ export interface ProxyOptions {
   log?: (message: string) => void;
 }
 
-/** Есть ли у сообщения id: уведомления ответа не требуют. */
-function idOf(raw: string): { id: unknown; hasId: boolean } {
+/** Разбор конверта: id нужен для ответа, method — для поведения при 401. */
+function envelope(raw: string): { id: unknown; hasId: boolean; method: string } {
   try {
     const msg = JSON.parse(raw) as Record<string, unknown>;
-    return { id: msg["id"], hasId: "id" in msg };
+    return {
+      id: msg["id"],
+      hasId: "id" in msg,
+      method: typeof msg["method"] === "string" ? msg["method"] : "",
+    };
   } catch {
-    return { id: null, hasId: false };
+    return { id: null, hasId: false, method: "" };
   }
 }
 
@@ -47,26 +65,44 @@ export async function forward(
   const trimmed = line.trim();
   if (!trimmed) return;
 
-  const { id, hasId } = idOf(trimmed);
+  const { id, hasId, method } = envelope(trimmed);
   const doFetch = opts.fetch ?? globalThis.fetch;
 
-  let res: Response;
-  try {
-    res = await doFetch(opts.endpoint ?? DEFAULT_ENDPOINT, {
+  const send = (key?: string | undefined): Promise<Response> =>
+    doFetch(opts.endpoint ?? DEFAULT_ENDPOINT, {
       method: "POST",
       headers: {
-        ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
         "Content-Type": "application/json",
         Accept: "application/json, text/event-stream",
       },
       body: trimmed,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
+
+  let res: Response;
+  try {
+    res = await send(opts.apiKey);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     opts.log?.(`сеть: ${reason}`);
     if (hasId) opts.write(errorResponse(id, `Не удалось связаться с срезAI: ${reason}`));
     return;
+  }
+
+  // Ключ есть, но сервер его не принял, а метод от ключа не зависит: повторяем
+  // без заголовка. Иначе рукопожатие падает, и пользователь не увидит ни списка
+  // инструментов, ни объяснения — клиент просто закроет сервер.
+  if (res.status === 401 && opts.apiKey && ANONYMOUS_METHODS.has(method)) {
+    opts.log?.(`401 на ${method}: ключ не принят, повторяю без ключа`);
+    try {
+      res = await send(undefined);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      opts.log?.(`сеть: ${reason}`);
+      if (hasId) opts.write(errorResponse(id, `Не удалось связаться с срезAI: ${reason}`));
+      return;
+    }
   }
 
   const body = await res.text();
