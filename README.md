@@ -104,6 +104,16 @@ Docker image, built by MCP directories to introspect the server in a sandbox:
 docker build -t srezai-mcp . && docker run --rm -i -e SREZAI_API_KEY=srz_live_ваш_ключ srezai-mcp
 ```
 
+Правки принимаются здесь, на GitHub: [CONTRIBUTING.md](CONTRIBUTING.md) объясняет,
+почему копия на GitVerse — зеркало и как прислать патч, если GitHub недоступен.
+Об уязвимости — [SECURITY.md](SECURITY.md), не публичным issue. Правила общения —
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+Changes go to GitHub: [CONTRIBUTING.md](CONTRIBUTING.md) explains why the GitVerse
+copy is a mirror and how to send a patch if GitHub is unavailable to you. For
+vulnerabilities see [SECURITY.md](SECURITY.md) rather than a public issue. Ground
+rules: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
 ## Лицензия / License
 
 MIT
