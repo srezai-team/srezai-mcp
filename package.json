@@ -1,7 +1,7 @@
 {
   "name": "srezai-mcp",
-  "version": "0.1.2",
-  "description": "MCP-сервер срезAI: веб-поиск, чтение страниц, скриншоты и извлечение данных по схеме как инструменты ИИ-агента",
+  "version": "0.1.3",
+  "description": "MCP-сервер срезAI: веб-поиск, чтение страниц, карта сайта, извлечение по схеме, проверка утверждений, готовые ответы и глубокое исследование как инструменты ИИ-агента",
   "license": "MIT",
   "author": "срезAI <support@srezai.ru>",
   "homepage": "https://srezai.ru",
@@ -17,7 +17,11 @@
     "mcp",
     "modelcontextprotocol",
     "search",
+    "web-search",
     "scraping",
+    "site-map",
+    "rag",
+    "fact-check",
     "llm",
     "agents",
     "srezai"
